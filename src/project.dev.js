@@ -663,11 +663,12 @@ window.__require = function e(t, n, r) {
       onLoad: function onLoad() {
         Emitter.instance.registerEvent("showPopupLoseGame", this._animOpenPopup.bind(this));
         this.node.y = 1e3;
-        this.node.active;
+        this.node.active = false;
       },
       _animOpenPopup: function _animOpenPopup(score) {
         var _this = this;
         this.node.active = true;
+        V.game.enabled = false;
         V.audio.playSoundLose();
         this._animAla();
         cc.tween(this.boardGame).to(.5, {
@@ -711,9 +712,9 @@ window.__require = function e(t, n, r) {
         }).start();
       },
       _animAla: function _animAla() {
-        var actionSacle1 = cc.scaleTo(2, 1.2, 1.2);
+        var actionScale1 = cc.scaleTo(2, 1.2, 1.2);
         var actionScale2 = cc.scaleTo(2, 1, 1);
-        var Action = cc.repeatForever(cc.sequence(actionSacle1, actionScale2));
+        var Action = cc.repeatForever(cc.sequence(actionScale1, actionScale2));
         this.Ala.runAction(Action);
       },
       start: function start() {},
@@ -721,6 +722,7 @@ window.__require = function e(t, n, r) {
         this._animHidePopup();
         this.boardGame.opacity = 255;
         V.audio.pauseSoundLose();
+        V.game.enabled = true;
       }
     });
     cc._RF.pop();
@@ -751,6 +753,7 @@ window.__require = function e(t, n, r) {
       block: null,
       audio: null,
       audio1: null,
+      game: null,
       userData: {
         score: 0,
         moveStep: 0
@@ -814,7 +817,6 @@ window.__require = function e(t, n, r) {
         return soundWin;
       },
       playSoundClick: function playSoundClick() {
-        console.log("PlaySoundClick");
         if (this.isNoneSound) return;
         var soundClick = cc.audioEngine.play(this.soundClick, false);
         return soundClick;
@@ -861,7 +863,6 @@ window.__require = function e(t, n, r) {
         cc.sys.localStorage.setItem("userData", JSON.stringify(userData));
       },
       loadBestScore: function loadBestScore() {
-        console.log("best Score");
         var userData = JSON.parse(cc.sys.localStorage.getItem("userData"));
         if (null == userData) {
           this.saveBestScore(V.userData);
@@ -897,7 +898,6 @@ window.__require = function e(t, n, r) {
       },
       onLoad: function onLoad() {
         Emitter.instance.emit("transBlock", this);
-        this.animZoom = cc.scaleTo(.2, 1);
       },
       setLabel: function setLabel(label) {
         this.labelNum.string = 0 == label ? "" : label;
@@ -905,11 +905,11 @@ window.__require = function e(t, n, r) {
         return 1;
       },
       appear: function appear() {
-        var actions = [ cc.scaleTo(0, 0), cc.scaleTo(.2, 1) ];
+        var actions = [ cc.scaleTo(0, 0), cc.scaleTo(.05, 1) ];
         this.node.runAction(cc.sequence(actions));
       },
       merge: function merge() {
-        var actions = [ cc.scaleTo(.2, 1.3), cc.scaleTo(.2, 1) ];
+        var actions = [ cc.scaleTo(.05, 1.3), cc.scaleTo(.05, 1) ];
         this.node.runAction(cc.sequence(actions));
       }
     });
@@ -922,21 +922,11 @@ window.__require = function e(t, n, r) {
     "use strict";
     cc._RF.push(module, "eacb9rmiiNOg5I83YAHp9T6", "board");
     "use strict";
-    var _cc$Class;
-    function _defineProperty(obj, key, value) {
-      key in obj ? Object.defineProperty(obj, key, {
-        value: value,
-        enumerable: true,
-        configurable: true,
-        writable: true
-      }) : obj[key] = value;
-      return obj;
-    }
     var ROWS = 4;
     var NUMBERS = [ 2, 4 ];
     var V = require("Variables");
     var Emitter = require("mEmitter");
-    cc.Class((_cc$Class = {
+    cc.Class({
       extends: cc.Component,
       properties: {
         blockPrefab: {
@@ -948,9 +938,7 @@ window.__require = function e(t, n, r) {
         Emitter.instance.emit("transBlocksLayout", this);
         Emitter.instance.registerEvent("transAudioSceneWelcomeToMain", this.transAudioSceneWelcomeToMain, this);
       },
-      transAudioSceneWelcomeToMain: function transAudioSceneWelcomeToMain(data) {
-        console.log(data);
-      },
+      transAudioSceneWelcomeToMain: function transAudioSceneWelcomeToMain(data) {},
       start: function start() {
         this.createBlocksLayout();
         this.gameInit();
@@ -962,7 +950,6 @@ window.__require = function e(t, n, r) {
         userData.score = V.scoreGame;
         userData.moveStep = 10;
         var bestScore = V.bestScore.loadBestScore();
-        console.log(bestScore.score);
         if (userData.score > bestScore.score) {
           V.bestScore.saveBestScore(userData);
           V.bestScore.loadBestScore();
@@ -1035,20 +1022,16 @@ window.__require = function e(t, n, r) {
           V.data[x][y] = numberRandom;
           block.getComponent("block").appear();
           emptyLocations = this.getEmptyLocations();
-          if (0 == emptyLocations.length) {
-            this.checkLose();
-            if (this.checkLose()) {
-              Emitter.instance.emit("showPopupLoseGame", V.scoreGame);
-              Emitter.instance.emit("onDisableKeyDownLoseGame");
-            }
+          if (0 == emptyLocations.length && this.checkLose()) {
+            Emitter.instance.emit("showPopupLoseGame", V.scoreGame);
+            Emitter.instance.emit("onDisableKeyDownLoseGame");
           }
         }
       },
-      afterMove: function afterMove(hasMoved) {
+      afterMove: function afterMove() {
         var _this = this;
         if (false == V.isMoved) {
           V.isCompleted = true;
-          console.log(V.isCompleted);
           return;
         }
         var actions = [ cc.callFunc(function() {
@@ -1086,26 +1069,8 @@ window.__require = function e(t, n, r) {
         }) ];
         blockTarget.runAction(cc.sequence(actions));
       },
-      inputRight: function inputRight() {
-        var _this2 = this;
-        var nodesToMove = this.getNodeToMove();
-        var _loop = function _loop(i) {
-          var actions = [ cc.callFunc(function() {
-            _this2.moveRight(nodesToMove[i].x, nodesToMove[i].y);
-          }), cc.callFunc(function() {
-            _this2.isMerged = false;
-          }), cc.delayTime(.1), cc.callFunc(function() {
-            if (0 == i) {
-              console.log("randomBlock");
-              _this2.randomBlock();
-            }
-          }) ];
-          _this2.node.runAction(cc.sequence(actions));
-        };
-        for (var i = nodesToMove.length - 1; i >= 0; i--) _loop(i);
-      },
       moveLeft: function moveLeft(row, col, callback) {
-        var _this3 = this;
+        var _this2 = this;
         if (0 == col || 0 == V.data[row][col]) {
           callback();
           return;
@@ -1117,9 +1082,9 @@ window.__require = function e(t, n, r) {
           V.data[row][col - 1] = V.data[row][col];
           V.data[row][col] = 0;
           V.blocks[row][col] = null;
-          V.isMoved = true;
           this.moveNode(block, position, function() {
-            _this3.moveLeft(row, col - 1, callback);
+            V.isMoved = true;
+            _this2.moveLeft(row, col - 1, callback);
           });
         } else {
           if (V.data[row][col - 1] != V.data[row][col]) {
@@ -1132,16 +1097,16 @@ window.__require = function e(t, n, r) {
           V.scoreExtra += V.data[row][col - 1];
           V.data[row][col] = 0;
           V.blocks[row][col] = null;
-          V.isMoved = true;
           this.moveNode(_block, _position, function() {
-            _this3.mergeNode(_block, V.blocks[row][col - 1], V.data[row][col - 1], function() {
+            _this2.mergeNode(_block, V.blocks[row][col - 1], V.data[row][col - 1], function() {
+              V.isMoved = true;
               callback();
             });
           });
         }
       },
       moveRight: function moveRight(row, col, callback) {
-        var _this4 = this;
+        var _this3 = this;
         if (col == V.rows - 1 || 0 == V.data[row][col]) {
           callback();
           return;
@@ -1153,10 +1118,9 @@ window.__require = function e(t, n, r) {
           V.data[row][col + 1] = V.data[row][col];
           V.data[row][col] = 0;
           V.blocks[row][col] = null;
-          V.isMoved = true;
           this.moveNode(block, position, function() {
             V.isMoved = true;
-            _this4.moveRight(row, col + 1, callback);
+            _this3.moveRight(row, col + 1, callback);
           });
         } else {
           if (V.data[row][col + 1] != V.data[row][col]) {
@@ -1169,168 +1133,160 @@ window.__require = function e(t, n, r) {
           V.scoreExtra += V.data[row][col + 1];
           V.data[row][col] = 0;
           V.blocks[row][col] = null;
-          V.isMoved = true;
           this.moveNode(_block2, _position2, function() {
-            _this4.mergeNode(_block2, V.blocks[row][col + 1], V.data[row][col + 1], function() {
+            _this3.mergeNode(_block2, V.blocks[row][col + 1], V.data[row][col + 1], function() {
               V.isMoved = true;
               callback();
             });
           });
         }
-      }
-    }, _defineProperty(_cc$Class, "inputRight", function inputRight() {
-      var _this5 = this;
-      cc.log("move right");
-      var hasMoved = true;
-      var getNodeToMove = [];
-      for (var row = 0; row < V.rows; row++) for (var col = V.rows - 1; col >= 0; col--) 0 != V.data[row][col] && getNodeToMove.push({
-        x: row,
-        y: col
-      });
-      var counter = 0;
-      for (var i = 0; i < getNodeToMove.length; ++i) this.moveRight(getNodeToMove[i].x, getNodeToMove[i].y, function() {
-        counter++;
-        _this5.checkCounter(counter, getNodeToMove, hasMoved);
-      });
-    }), _defineProperty(_cc$Class, "inputLeft", function inputLeft() {
-      var _this6 = this;
-      cc.log("move left");
-      var hasMoved = true;
-      var getNodeToMove = [];
-      for (var row = 0; row < V.rows; ++row) for (var col = 0; col < V.rows; ++col) 0 != V.data[row][col] && getNodeToMove.push({
-        x: row,
-        y: col
-      });
-      console.log(getNodeToMove);
-      var counter = 0;
-      for (var i = 0; i < getNodeToMove.length; ++i) this.moveLeft(getNodeToMove[i].x, getNodeToMove[i].y, function() {
-        counter++;
-        _this6.checkCounter(counter, getNodeToMove, hasMoved);
-      });
-    }), _defineProperty(_cc$Class, "moveUp", function moveUp(row, col, callback) {
-      var _this7 = this;
-      if (0 == row || 0 == V.data[row][col]) {
-        callback();
-        return;
-      }
-      if (0 == V.data[row - 1][col]) {
-        var block = V.blocks[row][col];
-        var position = V.positions[row - 1][col];
-        V.blocks[row - 1][col] = block;
-        V.data[row - 1][col] = V.data[row][col];
-        V.data[row][col] = 0;
-        V.blocks[row][col] = null;
-        V.isMoved = true;
-        this.moveNode(block, position, function() {
-          _this7.moveUp(row - 1, col, callback);
+      },
+      inputRight: function inputRight() {
+        var _this4 = this;
+        var getNodeToMove = [];
+        for (var row = 0; row < V.rows; row++) for (var col = V.rows - 1; col >= 0; col--) 0 != V.data[row][col] && getNodeToMove.push({
+          x: row,
+          y: col
         });
-      } else {
-        if (V.data[row - 1][col] != V.data[row][col]) {
+        var counter = 0;
+        for (var i = 0; i < getNodeToMove.length; ++i) this.moveRight(getNodeToMove[i].x, getNodeToMove[i].y, function() {
+          counter++;
+          _this4.checkCounter(counter, getNodeToMove);
+        });
+      },
+      inputLeft: function inputLeft() {
+        var _this5 = this;
+        var getNodeToMove = [];
+        for (var row = 0; row < V.rows; ++row) for (var col = 0; col < V.rows; ++col) 0 != V.data[row][col] && getNodeToMove.push({
+          x: row,
+          y: col
+        });
+        var counter = 0;
+        for (var i = 0; i < getNodeToMove.length; ++i) this.moveLeft(getNodeToMove[i].x, getNodeToMove[i].y, function() {
+          counter++;
+          _this5.checkCounter(counter, getNodeToMove);
+        });
+      },
+      moveUp: function moveUp(row, col, callback) {
+        var _this6 = this;
+        if (0 == row || 0 == V.data[row][col]) {
           callback();
           return;
         }
-        var _block3 = V.blocks[row][col];
-        var _position3 = V.positions[row - 1][col];
-        V.data[row - 1][col] *= 2;
-        V.scoreExtra += V.data[row - 1][col];
-        V.data[row][col] = 0;
-        V.blocks[row][col] = null;
-        V.isMoved = true;
-        this.moveNode(_block3, _position3, function() {
-          _this7.mergeNode(_block3, V.blocks[row - 1][col], V.data[row - 1][col], function() {
-            callback();
+        if (0 == V.data[row - 1][col]) {
+          var block = V.blocks[row][col];
+          var position = V.positions[row - 1][col];
+          V.blocks[row - 1][col] = block;
+          V.data[row - 1][col] = V.data[row][col];
+          V.data[row][col] = 0;
+          V.blocks[row][col] = null;
+          this.moveNode(block, position, function() {
+            V.isMoved = true;
+            _this6.moveUp(row - 1, col, callback);
           });
+        } else {
+          if (V.data[row - 1][col] != V.data[row][col]) {
+            callback();
+            return;
+          }
+          var _block3 = V.blocks[row][col];
+          var _position3 = V.positions[row - 1][col];
+          V.data[row - 1][col] *= 2;
+          V.scoreExtra += V.data[row - 1][col];
+          V.data[row][col] = 0;
+          V.blocks[row][col] = null;
+          this.moveNode(_block3, _position3, function() {
+            _this6.mergeNode(_block3, V.blocks[row - 1][col], V.data[row - 1][col], function() {
+              V.isMoved = true;
+              callback();
+            });
+          });
+        }
+      },
+      inputUp: function inputUp() {
+        var _this7 = this;
+        var getNodeToMove = [];
+        for (var row = 0; row < V.rows; row++) for (var col = 0; col < V.rows; col++) 0 != V.data[row][col] && getNodeToMove.push({
+          x: row,
+          y: col
         });
-      }
-    }), _defineProperty(_cc$Class, "inputUp", function inputUp() {
-      var _this8 = this;
-      var hasMoved = true;
-      console.log("Down");
-      var getNodeToMove = [];
-      for (var row = 0; row < V.rows; row++) for (var col = 0; col < V.rows; col++) 0 != V.data[row][col] && getNodeToMove.push({
-        x: row,
-        y: col
-      });
-      var counter = 0;
-      for (var i = 0; i < getNodeToMove.length; ++i) this.moveUp(getNodeToMove[i].x, getNodeToMove[i].y, function() {
-        counter++;
-        _this8.checkCounter(counter, getNodeToMove, hasMoved);
-      });
-    }), _defineProperty(_cc$Class, "moveDown", function moveDown(row, col, callback) {
-      var _this9 = this;
-      if (row == V.rows - 1 || 0 == V.data[row][col]) {
-        callback();
-        return;
-      }
-      if (0 == V.data[row + 1][col]) {
-        var block = V.blocks[row][col];
-        var position = V.positions[row + 1][col];
-        V.blocks[row + 1][col] = block;
-        V.data[row + 1][col] = V.data[row][col];
-        V.data[row][col] = 0;
-        V.blocks[row][col] = null;
-        V.isMoved = true;
-        this.moveNode(block, position, function() {
-          _this9.moveDown(row + 1, col, callback);
+        var counter = 0;
+        for (var i = 0; i < getNodeToMove.length; ++i) this.moveUp(getNodeToMove[i].x, getNodeToMove[i].y, function() {
+          counter++;
+          _this7.checkCounter(counter, getNodeToMove);
         });
-      } else {
-        if (V.data[row + 1][col] != V.data[row][col]) {
+      },
+      moveDown: function moveDown(row, col, callback) {
+        var _this8 = this;
+        if (row == V.rows - 1 || 0 == V.data[row][col]) {
           callback();
           return;
         }
-        var _block4 = V.blocks[row][col];
-        var _position4 = V.positions[row + 1][col];
-        V.data[row + 1][col] *= 2;
-        V.scoreExtra += V.data[row + 1][col];
-        V.data[row][col] = 0;
-        V.blocks[row][col] = null;
-        V.isMoved = true;
-        this.moveNode(_block4, _position4, function() {
-          _this9.mergeNode(_block4, V.blocks[row + 1][col], V.data[row + 1][col], function() {
-            callback();
+        if (0 == V.data[row + 1][col]) {
+          var block = V.blocks[row][col];
+          var position = V.positions[row + 1][col];
+          V.blocks[row + 1][col] = block;
+          V.data[row + 1][col] = V.data[row][col];
+          V.data[row][col] = 0;
+          V.blocks[row][col] = null;
+          this.moveNode(block, position, function() {
+            V.isMoved = true;
+            _this8.moveDown(row + 1, col, callback);
           });
+        } else {
+          if (V.data[row + 1][col] != V.data[row][col]) {
+            callback();
+            return;
+          }
+          var _block4 = V.blocks[row][col];
+          var _position4 = V.positions[row + 1][col];
+          V.data[row + 1][col] *= 2;
+          V.scoreExtra += V.data[row + 1][col];
+          V.data[row][col] = 0;
+          V.blocks[row][col] = null;
+          this.moveNode(_block4, _position4, function() {
+            _this8.mergeNode(_block4, V.blocks[row + 1][col], V.data[row + 1][col], function() {
+              V.isMoved = true;
+              callback();
+            });
+          });
+        }
+      },
+      inputDown: function inputDown() {
+        var _this9 = this;
+        var getNodeToMove = [];
+        for (var row = V.rows - 1; row >= 0; row--) for (var col = 0; col < V.rows; col++) 0 != V.data[row][col] && getNodeToMove.push({
+          x: row,
+          y: col
         });
+        var counter = 0;
+        for (var i = 0; i < getNodeToMove.length; i++) this.moveDown(getNodeToMove[i].x, getNodeToMove[i].y, function() {
+          counter++;
+          _this9.checkCounter(counter, getNodeToMove);
+        });
+      },
+      checkCounter: function checkCounter(counter, getNodeToMove) {
+        counter == getNodeToMove.length && this.afterMove();
+      },
+      newGame: function newGame() {
+        for (var row = 0; row < 4; row++) for (var col = 0; col < 4; col++) null != V.blocks[row][col] && V.blocks[row][col].destroy();
+        this.gameInit();
+        Emitter.instance.emit("onEnableKeyDown");
+        V.audio1.playSoundClick();
+      },
+      checkWin: function checkWin() {
+        for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++) if (2048 == V.data[i][j]) return true;
+        return false;
+      },
+      checkLose: function checkLose() {
+        for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++) if (3 == i && j < 3) {
+          if (V.data[i][j] == V.data[i][j + 1]) return false;
+        } else if (3 == j) {
+          if (i < 3 && V.data[i][j] == V.data[i + 1][j]) return false;
+        } else if (V.data[i][j] == V.data[i + 1][j] || V.data[i][j] == V.data[i][j + 1]) return false;
+        return true;
       }
-    }), _defineProperty(_cc$Class, "inputDown", function inputDown() {
-      var _this10 = this;
-      cc.log("move down");
-      var hasMoved = true;
-      var getNodeToMove = [];
-      for (var row = V.rows - 1; row >= 0; row--) for (var col = 0; col < V.rows; col++) 0 != V.data[row][col] && getNodeToMove.push({
-        x: row,
-        y: col
-      });
-      var counter = 0;
-      for (var i = 0; i < getNodeToMove.length; i++) this.moveDown(getNodeToMove[i].x, getNodeToMove[i].y, function() {
-        counter++;
-        _this10.checkCounter(counter, getNodeToMove, hasMoved);
-      });
-    }), _defineProperty(_cc$Class, "checkCounter", function checkCounter(counter, getNodeToMove, hasMoved) {
-      counter == getNodeToMove.length && this.afterMove(hasMoved);
-    }), _defineProperty(_cc$Class, "newGame", function newGame() {
-      console.log("new Game");
-      for (var row = 0; row < 4; row++) for (var col = 0; col < 4; col++) null != V.blocks[row][col] && V.blocks[row][col].destroy();
-      this.gameInit();
-      Emitter.instance.emit("onEnableKeyDown");
-      V.audio1.playSoundClick();
-    }), _defineProperty(_cc$Class, "getNodeToMove", function getNodeToMove() {
-      var nodesToMove = [];
-      for (var row = 0; row < 4; row++) for (var col = 0; col < 4; col++) 0 != V.data[row][col] && nodesToMove.push({
-        x: row,
-        y: col
-      });
-      return nodesToMove;
-    }), _defineProperty(_cc$Class, "checkWin", function checkWin() {
-      for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++) if (2048 == V.data[i][j]) return true;
-      return false;
-    }), _defineProperty(_cc$Class, "checkLose", function checkLose() {
-      for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++) if (3 == i && j < 3) {
-        if (V.data[i][j] == V.data[i][j + 1]) return false;
-      } else if (3 == j) {
-        if (i < 3 && V.data[i][j] == V.data[i + 1][j]) return false;
-      } else if (V.data[i][j] == V.data[i + 1][j] || V.data[i][j] == V.data[i][j + 1]) return false;
-      return true;
-    }), _cc$Class));
+    });
     cc._RF.pop();
   }, {
     Variables: "Variables",
@@ -1365,7 +1321,9 @@ window.__require = function e(t, n, r) {
     var Emitter = require("mEmitter");
     cc.Class({
       extends: cc.Component,
-      properties: {},
+      properties: {
+        btnNewGame: cc.Button
+      },
       onLoad: function onLoad() {
         Emitter.instance.registerEvent("transBlocksLayout", this.transBlocksLayout, this);
         Emitter.instance.registerEvent("transBlock", this.transBlock, this);
@@ -1373,13 +1331,10 @@ window.__require = function e(t, n, r) {
         Emitter.instance.registerEvent("transBestScore", this.transBestScore, this);
         Emitter.instance.registerEvent("transAudio", this.transAudio, this);
         Emitter.instance.registerEvent("onEnableKeyDown", this.initEvent.bind(this));
-        Emitter.instance.registerEvent("transAudioSceneWelcomeToMain", this.transAudioSceneWelcomeToMain, this);
         Emitter.instance.registerEvent("onDisabledKeyDown", this.onDisabledKeyDown.bind(this));
         Emitter.instance.registerEvent("onDisableKeyDownLoseGame", this.onDisabledKeyDown.bind(this));
+        V.game = this.btnNewGame;
         this.initEvent();
-        console.log(V.audio.playSoundClick());
-        console.log(V.audio.isNoneSound);
-        console.log(V.isNoneSound);
       },
       init: function init() {
         V.bestScore.loadBestScore();
@@ -1394,13 +1349,9 @@ window.__require = function e(t, n, r) {
           _this.TouchEnd(event);
         });
       },
-      transAudioSceneWelcomeToMain: function transAudioSceneWelcomeToMain(data) {
-        console.log(data);
-      },
       transAudio: function transAudio(data) {
         V.audio1 = data;
         V.audio1.isNoneSound = V.isNoneSound;
-        console.log(V.audio1.isNoneSound);
       },
       transBestScore: function transBestScore(data) {
         V.bestScore = data;
@@ -1418,19 +1369,14 @@ window.__require = function e(t, n, r) {
         this.endPoint = event.getLocation();
         var subVector = this.endPoint.sub(this.startPoint);
         var delta = subVector.mag();
-        if (false == V.isCompleted) {
-          console.log("not Completed");
-          return;
-        }
+        if (true != V.isCompleted) return;
         if (delta > 50) if (Math.abs(subVector.x) > Math.abs(subVector.y)) if (subVector.x > 0) {
           V.isCompleted = false;
-          cc.log("right");
           V.audio1.playSoundClick();
           V.blocksLayout.inputRight();
           V.isMoved = false;
         } else {
           V.isCompleted = false;
-          cc.log("left");
           V.audio1.playSoundClick();
           V.blocksLayout.inputLeft();
           V.isMoved = false;
@@ -1442,7 +1388,6 @@ window.__require = function e(t, n, r) {
           V.isMoved = false;
         } else {
           V.isCompleted = false;
-          cc.log("Down");
           V.audio1.playSoundClick();
           V.blocksLayout.inputDown();
           V.isMoved = false;
@@ -1456,28 +1401,24 @@ window.__require = function e(t, n, r) {
         V.isCompleted = false;
         switch (event.keyCode) {
          case cc.macro.KEY.down:
-          console.log("Press a key DOWN");
           V.audio1.playSoundClick();
           V.blocksLayout.inputDown();
           V.isMoved = false;
           break;
 
          case cc.macro.KEY.up:
-          console.log("Press a key UP");
           V.audio1.playSoundClick();
           V.blocksLayout.inputUp();
           V.isMoved = false;
           break;
 
          case cc.macro.KEY.left:
-          console.log("Press a key LEFT");
           V.audio1.playSoundClick();
           V.blocksLayout.inputLeft();
           V.isMoved = false;
           break;
 
          case cc.macro.KEY.right:
-          console.log("Press a key RIGHT");
           V.audio1.playSoundClick();
           V.blocksLayout.inputRight();
           V.isMoved = false;
@@ -1677,7 +1618,6 @@ window.__require = function e(t, n, r) {
         var _this = this;
         var duration = .5;
         if (0 == number) return;
-        console.log(number);
         this.scoreExtra.node.active = true;
         this.scoreExtra.string = "+ " + number;
         var actions = [ cc.moveTo(0, 0, 0), cc.moveTo(duration, 0, 20), cc.moveTo(0, 0, -20), cc.callFunc(function() {
@@ -1686,7 +1626,6 @@ window.__require = function e(t, n, r) {
         this.scoreExtra.node.runAction(cc.sequence(actions));
       },
       updateScore: function updateScore(number) {
-        console.log("update score");
         this.scoreNumber.string = number;
       }
     });
@@ -1709,9 +1648,17 @@ window.__require = function e(t, n, r) {
         noneMusic: cc.Node,
         playBtn: cc.Node,
         _isNoneSound: false,
-        _isNoneMusic: false
+        _isNoneMusic: false,
+        _isClick: false
+      },
+      get isClick() {
+        return this._isClick;
+      },
+      set isClick(value) {
+        return this._isClick = value;
       },
       onLoad: function onLoad() {
+        this.isClick = false;
         this.node.y = 1e3;
         this.node.active = false;
         this.noneSound.active = this._isNoneSound;
@@ -1719,14 +1666,26 @@ window.__require = function e(t, n, r) {
       },
       start: function start() {},
       onClickBtn: function onClickBtn() {
+        console.log(this.isClick);
+        if (this.isClick) {
+          console.log("destroy");
+          return;
+        }
+        this.isClick = false;
+        console.log("open");
         this.openPopup();
       },
       onClickBtnClose: function onClickBtnClose() {
-        V.audio.playSoundClick();
-        this.hidePopup();
+        if (true == this.isClick) {
+          V.audio.playSoundClick();
+          this.hidePopup();
+          this.isClick = false;
+        }
       },
       openPopup: function openPopup() {
+        if (this.isClick) return;
         V.audio.playSoundClick();
+        this.isClick = true;
         this.node.active = true;
         this.playBtn.active = false;
         cc.tween(this.mainMenu).to(.5, {
@@ -1736,8 +1695,6 @@ window.__require = function e(t, n, r) {
           position: cc.v2(0, 0)
         }, {
           easing: "backInOut"
-        }).call(function() {
-          cc.log("ok");
         }).start();
       },
       hidePopup: function hidePopup() {
@@ -1755,7 +1712,6 @@ window.__require = function e(t, n, r) {
           V.audio.pauseSoundClick();
           V.audio.isNoneSound = true;
           V.isNoneSound = V.audio.isNoneSound;
-          console.log(V.audio.isNoneSound);
         } else {
           V.audio.isNoneSound = false;
           V.isNoneSound = V.audio.isNoneSound;
@@ -1788,6 +1744,7 @@ window.__require = function e(t, n, r) {
           type: cc.Label
         },
         _text: "2048",
+        _isClick: false,
         mainMenu: cc.Node,
         btnPlay: cc.Node,
         btnSetting: cc.Node,
@@ -1795,8 +1752,15 @@ window.__require = function e(t, n, r) {
         cloud2: cc.Node,
         logo: cc.Node
       },
+      get isClick() {
+        return this._isClick;
+      },
+      set isClick(value) {
+        return this._isClick = value;
+      },
       onLoad: function onLoad() {
         var _this = this;
+        this.isClick = false;
         this.label.string = this._text;
         this.label.fontSize = 200;
         this.mainMenu.active = false;
@@ -1831,10 +1795,14 @@ window.__require = function e(t, n, r) {
         return this.anim3 = cc.rotateTo(5, 0).easing(cc.easeBackInOut(.5));
       },
       onClickBtnPlay: function onClickBtnPlay() {
-        console.log(V.isNoneSound);
-        V.audio.playSoundClick();
-        Emitter.instance.emit("transAudioSceneWelcomeToMain", V.audio.isNoneSound);
-        cc.director.loadScene("Main");
+        if (false == this.isClick) {
+          console.log(V.isNoneSound);
+          V.audio.playSoundClick();
+          Emitter.instance.emit("transAudioSceneWelcomeToMain", V.audio.isNoneSound);
+          cc.director.loadScene("Main");
+          this.isClick = true;
+        }
+        return;
       }
     });
     cc._RF.pop();
