@@ -61,15 +61,15 @@ window._CCSettings = {
             ]
         }
     },
-    launchScene: "db://assets/Scene/Main.fire",
+    launchScene: "db://assets/Scene/Wellcome.fire",
     scenes: [
-        {
-            url: "db://assets/Scene/Main.fire",
-            uuid: "2dL3kvpAxJu6GJ7RdqJG5J"
-        },
         {
             url: "db://assets/Scene/Wellcome.fire",
             uuid: "484xEqAedIc5+yH7fNBdEg"
+        },
+        {
+            url: "db://assets/Scene/Main.fire",
+            uuid: "2dL3kvpAxJu6GJ7RdqJG5J"
         }
     ],
     packedAssets: {
