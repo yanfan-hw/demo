@@ -25,417 +25,6 @@ window.__require = function e(t, n, r) {
   for (var o = 0; o < r.length; o++) s(r[o]);
   return s;
 }({
-  BocksLayout: [ function(require, module, exports) {
-    "use strict";
-    cc._RF.push(module, "1e62cz1tsFKjawO1MKdkTYI", "BocksLayout");
-    "use strict";
-    var _typeof = "function" === typeof Symbol && "symbol" === typeof Symbol.iterator ? function(obj) {
-      return typeof obj;
-    } : function(obj) {
-      return obj && "function" === typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-    };
-    var V = require("Variables");
-    var Emitter = require("mEmitter");
-    cc.Class({
-      extends: cc.Component,
-      properties: {
-        BlockPrefab: cc.Prefab,
-        gap: 20,
-        flag: true,
-        isCompleted: true,
-        isMerged: false
-      },
-      onLoad: function onLoad() {
-        Emitter.instance.emit("transBlocksLayout", this);
-      },
-      createdBlock: function createdBlock(width, height, x, y, label) {
-        var block = cc.instantiate(this.BlockPrefab);
-        block.width = width;
-        block.height = height;
-        block.parent = this.node;
-        block.setPosition(cc.v2(x, y));
-        block.getComponent("Block").setLabel(label);
-        return block;
-      },
-      createBlocksLayout: function createBlocksLayout() {
-        var y = 700;
-        var distance = 20;
-        var size = 150;
-        for (var row = 0; row < 4; row++) {
-          V.positions.push([ 0, 0, 0, 0 ]);
-          var x = 200;
-          for (var col = 0; col < V.cols; col++) {
-            this.createdBlock(size, size, x, y, 0);
-            V.positions[row][col] = cc.v2(x, y);
-            x += distance + size;
-          }
-          y -= distance + size;
-        }
-      },
-      init: function init() {
-        for (var i = 0; i < 4; i++) {
-          V.blocks.push([ null, null, null, null ]);
-          V.data.push([ 0, 0, 0, 0 ]);
-        }
-        this.randomBlock();
-        this.randomBlock();
-      },
-      getEmptyLocations: function getEmptyLocations() {
-        var emptyLocations = [];
-        for (var row = 0; row < 4; row++) for (var col = 0; col < 4; col++) null == V.blocks[row][col] && emptyLocations.push({
-          x: row,
-          y: col
-        });
-        return emptyLocations;
-      },
-      randomBlock: function randomBlock() {
-        var emptyLocations = this.getEmptyLocations();
-        if ("" == emptyLocations) return;
-        var locationRandom = emptyLocations[Math.floor(Math.random() * emptyLocations.length)];
-        var x = locationRandom.x;
-        var y = locationRandom.y;
-        var size = 150;
-        var numberRandom = V.numbers[Math.floor(Math.random() * V.numbers.length)];
-        var block = this.createdBlock(size, size, V.positions[x][y].x, V.positions[x][y].y, numberRandom);
-        V.blocks[x][y] = block;
-        V.data[x][y] = numberRandom;
-        return true;
-      },
-      mergeNode: function mergeNode(b1, b2, num) {
-        b1.destroy();
-        var scale1 = cc.scaleTo(.1, 1.1);
-        var scale2 = cc.scaleTo(.1, 1);
-        var mid = cc.callFunc(function() {
-          b2.getComponent("Block").setLabel(num);
-        });
-        var finished = cc.callFunc(function() {});
-        b2.runAction(cc.sequence(scale1, mid, scale2, finished));
-      },
-      afterMove: function afterMove(hasMoved) {
-        this.randomBlock();
-      },
-      mergeUpData: function mergeUpData(col) {
-        var _this = this;
-        var _loop = function _loop(row) {
-          if (0 == V.data[row][col] || 0 == row) return {
-            v: void 0
-          };
-          if (V.data[row - 1][col] == V.data[row][col]) {
-            var block = V.blocks[row][col];
-            var block1 = V.blocks[row - 1][col];
-            var positionToMove = V.positions[row - 1][col];
-            V.data[row - 1][col] *= 2;
-            V.data[row][col] = 0;
-            V.blocks[row][col] = null;
-            var actionsMove = [ cc.moveTo(.05, positionToMove), cc.callFunc(function() {
-              _this.isCompleted = true;
-            }) ];
-            block.runAction(cc.sequence(actionsMove));
-            var actionsMerge = [ cc.callFunc(function() {
-              _this.mergeNode(block, block1, V.data[row - 1][col]);
-            }), cc.callFunc(function() {}) ];
-            block1.runAction(cc.sequence(actionsMerge));
-            return {
-              v: void 0
-            };
-          }
-        };
-        for (var row = 3; row >= 0; row--) {
-          var _ret = _loop(row);
-          if ("object" === ("undefined" === typeof _ret ? "undefined" : _typeof(_ret))) return _ret.v;
-        }
-      },
-      mergeDown: function mergeDown(col) {
-        var _this2 = this;
-        console.log("Dow");
-        var _loop2 = function _loop2(row) {
-          if (3 == row) {
-            console.log("return");
-            return {
-              v: void 0
-            };
-          }
-          if (V.data[row + 1][col] == V.data[row][col] && 0 != V.data[row + 1][col]) {
-            console.log("===sequence");
-            _this2.isMerged = true;
-            var block = V.blocks[row][col];
-            var block1 = V.blocks[row + 1][col];
-            var positionToMove = V.positions[row + 1][col];
-            V.data[row + 1][col] *= 2;
-            V.data[row][col] = 0;
-            V.blocks[row][col] = null;
-            var actionsMove = [ cc.moveTo(.05, positionToMove), cc.callFunc(function() {
-              _this2.isCompleted = true;
-            }) ];
-            block.runAction(cc.sequence(actionsMove));
-            var actionsMerge = [ cc.callFunc(function() {
-              _this2.mergeNode(block, block1, V.data[row + 1][col]);
-            }), cc.callFunc(function() {}) ];
-            block1.runAction(cc.sequence(actionsMerge));
-            return {
-              v: void 0
-            };
-          }
-        };
-        for (var row = 0; row < 4; row++) {
-          var _ret2 = _loop2(row);
-          if ("object" === ("undefined" === typeof _ret2 ? "undefined" : _typeof(_ret2))) return _ret2.v;
-        }
-      },
-      moveDown: function moveDown(row, col) {
-        var _this3 = this;
-        this.isCompleted = false;
-        if (3 == row || 0 == V.data[row][col]) {
-          this.mergeDown(col);
-          return;
-        }
-        var block = V.blocks[row][col];
-        var positionToMove = V.positions[row + 1][col];
-        if (0 == V.data[row + 1][col]) {
-          V.blocks[row + 1][col] = block;
-          V.data[row + 1][col] = V.data[row][col];
-          V.data[row][col] = 0;
-          V.blocks[row][col] = null;
-          var actions = [ cc.moveTo(.05, positionToMove), cc.callFunc(function() {
-            _this3.moveDown(row + 1, col);
-          }), cc.callFunc(function() {
-            _this3.isCompleted = true;
-          }) ];
-          block.runAction(cc.sequence(actions));
-          return;
-        }
-        this.moveDown(row + 1, col);
-        this.isCompleted = true;
-        return;
-      },
-      mergeRight: function mergeRight(row) {
-        var _this4 = this;
-        console.log(row);
-        var _loop3 = function _loop3(col) {
-          if (0 == V.data[row][col]) return {
-            v: void 0
-          };
-          if (V.data[row][col - 1] == V.data[row][col] && 0 != V.data[row][col - 1]) {
-            _this4.isMerged = true;
-            var block = V.blocks[row][col - 1];
-            var block1 = V.blocks[row][col];
-            var positionToMove = V.positions[row][col];
-            V.data[row][col] *= 2;
-            V.data[row][col - 1] = 0;
-            V.blocks[row][col - 1] = null;
-            var actionsMove = [ cc.moveTo(.05, positionToMove), cc.callFunc(function() {
-              _this4.isCompleted = true;
-            }) ];
-            block.runAction(cc.sequence(actionsMove));
-            var actionsMerge = [ cc.callFunc(function() {
-              _this4.mergeNode(block, block1, V.data[row][col]);
-            }), cc.callFunc(function() {}) ];
-            block1.runAction(cc.sequence(actionsMerge));
-            return {
-              v: void 0
-            };
-          }
-        };
-        for (var col = 3; col >= 0; col--) {
-          var _ret3 = _loop3(col);
-          if ("object" === ("undefined" === typeof _ret3 ? "undefined" : _typeof(_ret3))) return _ret3.v;
-        }
-      },
-      moveRight: function moveRight(row, col) {
-        var _this5 = this;
-        this.isCompleted = false;
-        if (3 == col || 0 == V.data[row][col]) {
-          this.mergeRight(row);
-          return;
-        }
-        var block = V.blocks[row][col];
-        var positionToMove = V.positions[row][col + 1];
-        if (0 == V.data[row][col + 1]) {
-          V.blocks[row][col + 1] = block;
-          V.data[row][col + 1] = V.data[row][col];
-          V.data[row][col] = 0;
-          V.blocks[row][col] = null;
-          var actions = [ cc.moveTo(.05, positionToMove), cc.callFunc(function() {
-            _this5.moveRight(row, col + 1);
-          }), cc.callFunc(function() {
-            _this5.isCompleted = true;
-          }) ];
-          block.runAction(cc.sequence(actions));
-          return;
-        }
-        this.moveRight(row, col + 1);
-        this.isCompleted = true;
-        return;
-      },
-      mergeLeft: function mergeLeft(row) {
-        var _this6 = this;
-        var _loop4 = function _loop4(col) {
-          if (0 == V.data[row][col]) return {
-            v: void 0
-          };
-          if (V.data[row][col] == V.data[row][col + 1]) {
-            var block = V.blocks[row][col + 1];
-            var block1 = V.blocks[row][col];
-            var positionToMove = V.positions[row][col];
-            V.data[row][col] *= 2;
-            V.data[row][col + 1] = 0;
-            V.blocks[row][col + 1] = null;
-            var actionsMove = [ cc.moveTo(.05, positionToMove), cc.callFunc(function() {
-              _this6.isCompleted = true;
-            }) ];
-            block.runAction(cc.sequence(actionsMove));
-            var actionsMerge = [ cc.callFunc(function() {
-              _this6.mergeNode(block, block1, V.data[row][col]);
-            }), cc.callFunc(function() {}) ];
-            block1.runAction(cc.sequence(actionsMerge));
-            return {
-              v: void 0
-            };
-          }
-        };
-        for (var col = 0; col < 4; col++) {
-          var _ret4 = _loop4(col);
-          if ("object" === ("undefined" === typeof _ret4 ? "undefined" : _typeof(_ret4))) return _ret4.v;
-        }
-      },
-      moveLeft: function moveLeft(row, col) {
-        var _this7 = this;
-        this.isCompleted = false;
-        if (0 == col || 0 == V.data[row][col]) {
-          this.mergeLeft(row);
-          return;
-        }
-        var block = V.blocks[row][col];
-        var positionToMove = V.positions[row][col - 1];
-        if (0 == V.data[row][col - 1]) {
-          V.blocks[row][col - 1] = block;
-          V.data[row][col - 1] = V.data[row][col];
-          V.data[row][col] = 0;
-          V.blocks[row][col] = null;
-          var actions = [ cc.moveTo(.05, positionToMove), cc.callFunc(function() {
-            _this7.moveLeft(row, col - 1);
-          }), cc.callFunc(function() {
-            _this7.isCompleted = true;
-          }) ];
-          block.runAction(cc.sequence(actions));
-          return;
-        }
-        this.moveLeft(row, col - 1);
-        this.isCompleted = true;
-        return;
-      },
-      moveUp: function moveUp(row, col) {
-        var _this8 = this;
-        this.isCompleted = false;
-        if (0 == row || 0 == V.data[row][col]) {
-          this.mergeUpData(col);
-          return;
-        }
-        var block = V.blocks[row][col];
-        var positionToMove = V.positions[row - 1][col];
-        if (0 == V.data[row - 1][col]) {
-          V.blocks[row - 1][col] = block;
-          V.data[row - 1][col] = V.data[row][col];
-          V.data[row][col] = 0;
-          V.blocks[row][col] = null;
-          var actions = [ cc.moveTo(.05, positionToMove), cc.callFunc(function() {
-            _this8.moveUp(row - 1, col);
-          }), cc.callFunc(function() {
-            _this8.isCompleted = true;
-          }) ];
-          block.runAction(cc.sequence(actions));
-          return;
-        }
-        this.moveUp(row - 1, col);
-        this.isCompleted = true;
-        return;
-      },
-      inputUp: function inputUp() {
-        var _this9 = this;
-        var nodesToMove = this.getNodeToMove();
-        console.log(nodesToMove);
-        var _loop5 = function _loop5(i) {
-          var actions = [ cc.callFunc(function() {
-            _this9.moveUp(nodesToMove[i].x, nodesToMove[i].y);
-          }), cc.callFunc(function() {
-            _this9.isMerged = false;
-          }), cc.delayTime(.1), cc.callFunc(function() {
-            0 == i && _this9.randomBlock();
-          }) ];
-          _this9.node.runAction(cc.sequence(actions));
-        };
-        for (var i = 0; i < nodesToMove.length; i++) _loop5(i);
-      },
-      inputDown: function inputDown() {
-        var _this10 = this;
-        var nodesToMove = this.getNodeToMove();
-        console.log(nodesToMove);
-        var _loop6 = function _loop6(i) {
-          var actions = [ cc.callFunc(function() {
-            _this10.moveDown(nodesToMove[i].x, nodesToMove[i].y);
-          }), cc.callFunc(function() {
-            _this10.isMerged = false;
-          }), cc.delayTime(.1), cc.callFunc(function() {
-            0 == i && _this10.randomBlock();
-          }) ];
-          _this10.node.runAction(cc.sequence(actions));
-        };
-        for (var i = nodesToMove.length - 1; i >= 0; i--) _loop6(i);
-      },
-      inputLeft: function inputLeft() {
-        var _this11 = this;
-        var nodesToMove = this.getNodeToMove();
-        var _loop7 = function _loop7(i) {
-          var actions = [ cc.callFunc(function() {
-            _this11.moveLeft(nodesToMove[i].x, nodesToMove[i].y);
-          }), cc.delayTime(.2), cc.callFunc(function() {
-            _this11.isMerged = false;
-          }), cc.delayTime(.1), cc.callFunc(function() {
-            if (0 == i) {
-              console.log("randomBlock");
-              _this11.randomBlock();
-            }
-          }) ];
-          _this11.node.runAction(cc.sequence(actions));
-        };
-        for (var i = 0; i < nodesToMove.length; i++) _loop7(i);
-      },
-      inputRight: function inputRight() {
-        var _this12 = this;
-        var nodesToMove = this.getNodeToMove();
-        var _loop8 = function _loop8(i) {
-          var actions = [ cc.callFunc(function() {
-            _this12.moveRight(nodesToMove[i].x, nodesToMove[i].y);
-          }), cc.callFunc(function() {
-            _this12.isMerged = false;
-          }), cc.delayTime(.1), cc.callFunc(function() {
-            if (0 == i) {
-              console.log("randomBlock");
-              _this12.randomBlock();
-            }
-          }) ];
-          _this12.node.runAction(cc.sequence(actions));
-        };
-        for (var i = nodesToMove.length - 1; i >= 0; i--) _loop8(i);
-      },
-      getNodeToMove: function getNodeToMove() {
-        var nodesToMove = [];
-        for (var row = 0; row < 4; row++) for (var col = 0; col < 4; col++) 0 != V.data[row][col] && nodesToMove.push({
-          x: row,
-          y: col
-        });
-        return nodesToMove;
-      },
-      start: function start() {
-        this.createBlocksLayout();
-        this.init();
-      }
-    });
-    cc._RF.pop();
-  }, {
-    Variables: "Variables",
-    mEmitter: "mEmitter"
-  } ],
   1: [ function(require, module, exports) {
     function EventEmitter() {
       this._events = this._events || {};
@@ -592,60 +181,6 @@ window.__require = function e(t, n, r) {
       return void 0 === arg;
     }
   }, {} ],
-  Game: [ function(require, module, exports) {
-    "use strict";
-    cc._RF.push(module, "cc8e1SvUpBJdL6+HQ+xTD5z", "Game");
-    "use strict";
-    var V = require("Variables");
-    var Emitter = require("mEmitter");
-    cc.Class({
-      extends: cc.Component,
-      properties: {},
-      onLoad: function onLoad() {
-        Emitter.instance = new Emitter();
-        Emitter.instance.registerEvent("transBlocksLayout", this.transBlocksLayout, this);
-        Emitter.instance.registerEvent("transBlock", this.transBlock, this);
-        cc.systemEvent.on(cc.SystemEvent.EventType.KEY_DOWN, this.onKeyDown, this);
-      },
-      transBlocksLayout: function transBlocksLayout(data) {
-        V.blocksLayout = data;
-      },
-      transBlock: function transBlock(data) {
-        V.block = data;
-      },
-      start: function start() {},
-      onKeyDown: function onKeyDown(event) {
-        switch (event.keyCode) {
-         case cc.macro.KEY.down:
-          console.log("Press a key DOWN");
-          V.blocksLayout.inputDown();
-          break;
-
-         case cc.macro.KEY.up:
-          console.log("Press a key UP");
-          V.blocksLayout.inputUp();
-          break;
-
-         case cc.macro.KEY.left:
-          console.log("Press a key LEFT");
-          V.blocksLayout.inputLeft();
-          break;
-
-         case cc.macro.KEY.right:
-          console.log("Press a key RIGHT");
-          V.blocksLayout.inputRight();
-          break;
-
-         default:
-          return;
-        }
-      }
-    });
-    cc._RF.pop();
-  }, {
-    Variables: "Variables",
-    mEmitter: "mEmitter"
-  } ],
   LoseGame: [ function(require, module, exports) {
     "use strict";
     cc._RF.push(module, "23a29CTqBlC1bFaQF0Hwhuw", "LoseGame");
@@ -745,6 +280,7 @@ window.__require = function e(t, n, r) {
       scoreExtra: 0,
       bestScoreGame: 0,
       isNoneSound: false,
+      isNondMusic: false,
       isCompleted: true,
       isMoved: false,
       score: null,
@@ -792,7 +328,8 @@ window.__require = function e(t, n, r) {
           default: null,
           type: cc.AudioClip
         },
-        _isNoneSound: false
+        _isNoneSound: false,
+        _isNoneMusic: false
       },
       get isNoneSound() {
         return this._isNoneSound;
@@ -800,19 +337,30 @@ window.__require = function e(t, n, r) {
       set isNoneSound(value) {
         return this._isNoneSound = value;
       },
+      get isNoneMusic() {
+        return this._isNoneMusic;
+      },
+      set isNoneMusic(value) {
+        return this._isNoneMusic = value;
+      },
       onLoad: function onLoad() {
+        this.isNoneMusic = false;
         Emitter.instance.emit("transAudio", this);
       },
       playMusicBackground: function playMusicBackground(loop) {
         this.pauseAll();
+        console.log(this.isNoneMusic);
+        if (this.isNoneMusic) return;
         cc.audioEngine.play(this.musicBackGround, loop);
       },
       playSoundLose: function playSoundLose() {
         this.pauseAll();
+        if (this.isNoneSound) return;
         cc.audioEngine.play(this.soundLose, false);
       },
       playSoundWin: function playSoundWin() {
         this.pauseAll();
+        if (this.isNoneSound) return;
         var soundWin = cc.audioEngine.play(this.soundWin, false);
         return soundWin;
       },
@@ -1275,15 +823,15 @@ window.__require = function e(t, n, r) {
         V.audio1.playSoundClick();
       },
       checkWin: function checkWin() {
-        for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++) if (2048 == V.data[i][j]) return true;
+        for (var row = 0; row < V.rows; row++) for (var col = 0; col < V.rows; col++) if (2048 == V.data[row][col]) return true;
         return false;
       },
       checkLose: function checkLose() {
-        for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++) if (3 == i && j < 3) {
-          if (V.data[i][j] == V.data[i][j + 1]) return false;
-        } else if (3 == j) {
-          if (i < 3 && V.data[i][j] == V.data[i + 1][j]) return false;
-        } else if (V.data[i][j] == V.data[i + 1][j] || V.data[i][j] == V.data[i][j + 1]) return false;
+        for (var row = 0; row < 4; row++) for (var col = 0; col < 4; col++) if (3 == row && col < 3) {
+          if (V.data[row][col] == V.data[row][col + 1]) return false;
+        } else if (3 == col) {
+          if (row < 3 && V.data[row][col] == V.data[row + 1][col]) return false;
+        } else if (V.data[row][col] == V.data[row + 1][col] || V.data[row][col] == V.data[row][col + 1]) return false;
         return true;
       }
     });
@@ -1352,6 +900,7 @@ window.__require = function e(t, n, r) {
       transAudio: function transAudio(data) {
         V.audio1 = data;
         V.audio1.isNoneSound = V.isNoneSound;
+        V.audio1.isNoneMusic = V.isNoneMusic;
       },
       transBestScore: function transBestScore(data) {
         V.bestScore = data;
@@ -1721,7 +1270,15 @@ window.__require = function e(t, n, r) {
       },
       onClickMusic: function onClickMusic() {
         this.isNoneMusic = !this.isNoneMusic;
-        this.isNoneMusic ? V.audio.pauseAll() : V.audio.playMusicBackground();
+        if (this.isNoneMusic) {
+          V.audio.pauseAll();
+          V.audio.isNoneMusic = true;
+          V.isNoneMusic = V.audio.isNoneMusic;
+        } else {
+          V.audio.playMusicBackground();
+          V.audio.isNoneMusic = false;
+          V.isNoneMusic = V.audio.isNoneMusic;
+        }
         this.noneMusic.active = this.isNoneMusic;
       }
     });
@@ -1810,4 +1367,4 @@ window.__require = function e(t, n, r) {
     Variables: "Variables",
     mEmitter: "mEmitter"
   } ]
-}, {}, [ "BocksLayout", "Game", "LoseGame", "Variables", "audio", "bestScore", "block", "board", "colors", "game", "mEmitter", "popup", "score", "setting", "welcome" ]);
+}, {}, [ "LoseGame", "Variables", "audio", "bestScore", "block", "board", "colors", "game", "mEmitter", "popup", "score", "setting", "welcome" ]);
